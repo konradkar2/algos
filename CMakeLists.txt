@@ -14,6 +14,7 @@ add_executable(graphDemo
 
 target_link_libraries(graphDemo
     raylib
+    m
 )
 
 

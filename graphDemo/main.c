@@ -1,5 +1,6 @@
 #include "../utils/da_append.h"
 #include <ctype.h>
+#include <math.h>
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,11 +74,15 @@ void prepare_graph(struct Graph *graph) {
 #define NODEHITBOXRADIUS (2 * NODERADIUS)
 #define EDGETHICKNESS 2
 #define NODEDISTANCE (NODERADIUS * 4)
-#define CLOCKSPLIT 24
+#define CLOCKSPLIT 3
 
-Vector2 find_pos_for_node(const struct node *node, struct Graph *graph) {
-  // for (int i = 0; i < CLOCKSPLIT; ++i) {
-  // }
+Vector2 find_pos_for_node(Vector2 reference_pos, const struct node *node,
+                          struct Graph *graph) {
+  for (int i = 0; i < CLOCKSPLIT; ++i) {
+    int xprim = reference_pos.x + cos(2.0 * PI / (i + 1.0)) * NODEDISTANCE;
+    int yprim = reference_pos.y + sin(2.0 * PI / (i + 1.0)) * NODEDISTANCE;
+    DrawCircle(xprim, yprim, NODERADIUS, BLUE);
+  }
   (void)node;
   (void)graph;
 
@@ -106,10 +111,12 @@ int main(void) {
 
     for (size_t i = 0; i < graph.edges.count; ++i) {
       struct edge *current_edge = &graph.edges.items[i];
-      for (int j = 0; j < 2; j++) {
+      for (int j = 0; j < 1; j++) {
         struct node *node = find_node(&graph.nodes, current_edge->ids[j]);
         if (!node->drawn) {
-          draw_node(node, (Vector2){50 * (i + j + 1), 50 * (i + j + 1)});
+          const Vector2 ref_pos = {200 * (i + j + 1), 200 * (i + j + 1)};
+          draw_node(node, ref_pos);
+          find_pos_for_node(ref_pos, node, &graph);
           node->drawn = true;
         }
       }
