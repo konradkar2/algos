@@ -2,6 +2,7 @@
 #define DA_ARRAY_H
 
 #include <stdlib.h>
+#include <assert.h>
 
 #define vector_of(type, name)                                                  \
   struct name {                                                                \
