@@ -95,10 +95,13 @@ void prepare_graph(struct Graph *graph) {
 #define CLOCKSPLIT 12
 
 // nodeA is already drawn node
-bool will_node_collide(const struct node *neighbour, const struct node *node,
-                       Vector2 node_pos, const struct edge *edge,
-                       struct Graph *graph) {
+bool can_draw_at_without_collision(struct Graph *graph,
+                                   const struct node *drawn_node,
+                                   const struct node *node, Vector2 node_pos,
+                                   const struct edge *edge) {
   // check if edge will collide with any of edges
+
+  assert(drawn_node->drawn == true);
 
   for (size_t j = 0; j < graph->edges.count; ++j) {
     const struct edge *curr_edge = &graph->edges.items[j];
@@ -106,7 +109,7 @@ bool will_node_collide(const struct node *neighbour, const struct node *node,
       continue;
     }
 
-    if (CheckCollisionLines(neighbour->pos, node_pos,
+    if (CheckCollisionLines(drawn_node->pos, node_pos,
                             curr_edge->nodes.items[0]->pos,
                             curr_edge->nodes.items[1]->pos, NULL)) {
       return false;
@@ -115,12 +118,12 @@ bool will_node_collide(const struct node *neighbour, const struct node *node,
   // check if edge will collide with any of nodes
   for (size_t k = 0; k < graph->nodes.count; ++k) {
     const struct node *curr_node = &graph->nodes.items[k];
-    if (!curr_node->drawn || curr_node->hash == neighbour->hash ||
+    if (!curr_node->drawn || curr_node->hash == drawn_node->hash ||
         curr_node->hash == node->hash) {
       continue;
     }
     if (CheckCollisionCircleLine(curr_node->pos, NODEHITBOXRADIUS,
-                                 neighbour->pos, node_pos)) {
+                                 drawn_node->pos, node_pos)) {
       return false;
     }
   }
@@ -135,31 +138,35 @@ bool will_node_collide(const struct node *neighbour, const struct node *node,
     if (curr_node->hash == node->hash) {
       continue;
     }
-    if (curr_node->hash == neighbour->hash) {
+    if (curr_node->hash == drawn_node->hash) {
       continue;
     }
 
     if (CheckCollisionCircles(node_pos, NODEHITBOXRADIUS, curr_node->pos,
-                              NODEHITBOXRADIUS))
+                              NODEHITBOXRADIUS)) {
       return false;
+    }
   }
   return true;
 }
 
 // try to find a position for the nodeB/edge to be drawn on circle of radius R
 // around nodeA
-bool get_pos_for_node(struct Graph *graph, const struct node *nodeA,
-                      const struct node *nodeB, const struct edge *edge,
-                      double R, Vector2 *result_pos) {
-  assert(nodeA->drawn == true);
-  assert(nodeB->drawn == false);
+bool try_get_pos_for_neigbour(struct Graph *graph,
+                              const struct node *drawn_node,
+                              const struct node *neighbour,
+                              const struct edge *edge, double R,
+                              Vector2 *result_pos) {
+  assert(drawn_node->drawn == true);
+  assert(neighbour->drawn == false);
 
   const double step = 2.0 * PI / CLOCKSPLIT;
   for (int i = 0; i < CLOCKSPLIT; ++i) {
     Vector2 possible_pos = {0};
-    possible_pos.x = nodeA->pos.x + cos(step * i) * R;
-    possible_pos.y = nodeA->pos.y + sin(step * i) * R;
-    if (false == will_node_collide(nodeA, nodeB, possible_pos, edge, graph)) {
+    possible_pos.x = drawn_node->pos.x + cos(step * i) * R;
+    possible_pos.y = drawn_node->pos.y + sin(step * i) * R;
+    if (false == can_draw_at_without_collision(graph, drawn_node, neighbour,
+                                               possible_pos, edge)) {
       *result_pos = possible_pos;
       return true;
     }
@@ -168,6 +175,8 @@ bool get_pos_for_node(struct Graph *graph, const struct node *nodeA,
 }
 
 void draw_node_at(const struct node *node, Vector2 pos) {
+  printf("drawing node (id %d) at x: %f, y: %f\n", node->id, pos.x, pos.y);
+
   DrawCircle(pos.x, pos.y, NODERADIUS, RED);
   Vector2 vec =
       MeasureTextEx(GetFontDefault(), TextFormat("%d", node->id), 25, 2);
@@ -180,38 +189,61 @@ void draw_edge_at(const struct edge *edge, Vector2 posA, Vector2 posB) {
   DrawLineV(posA, posB, BLACK);
 }
 
+bool draw_nodes_neighbours(struct Graph *graph, struct node *drawn_node);
+
+bool draw_nodes_neigbour(struct Graph *graph, struct node *drawn_node,
+                         struct node *neighbour, struct edge *edge) {
+  printf("drawing neighbour, id: %d, hash: %d\n", neighbour->id,
+         neighbour->hash);
+  assert(drawn_node->hash != neighbour->hash);
+  assert(drawn_node->drawn == true);
+  assert(neighbour->drawn == false);
+
+  for (size_t radius = NODEDISTANCE; radius < NODEDISTANCE * 3; radius += 10) {
+    Vector2 pos_for_neighbour;
+    if (try_get_pos_for_neigbour(graph, drawn_node, neighbour, edge, radius,
+                                 &pos_for_neighbour)) {
+      draw_node_at(neighbour, pos_for_neighbour);
+      neighbour->pos = pos_for_neighbour;
+      neighbour->drawn = true;
+      draw_edge_at(edge, drawn_node->pos, pos_for_neighbour);
+      edge->drawn = true;
+
+      if (!draw_nodes_neighbours(graph, neighbour)) {
+        // we failed to draw neigbour's neigbours so lets cancel drawing
+        // process
+        return false;
+      }
+    }
+  }
+
+  return neighbour->drawn;
+}
+
+struct node *get_neighbour(struct node *node, struct edge *edge) {
+  assert(edge->nodes.count == 2);
+  if (edge->nodes.items[0]->hash == node->hash) {
+    return edge->nodes.items[1];
+  } else {
+    return edge->nodes.items[0];
+  }
+}
+
 bool draw_nodes_neighbours(struct Graph *graph, struct node *drawn_node) {
   printf("drawing neighbours for node %d hash %d\n", drawn_node->id,
          drawn_node->hash);
 
+  assert(drawn_node->drawn == true);
+
   for (size_t i = 0; i < drawn_node->edges.count; ++i) {
-    const struct edge *current_edge = drawn_node->edges.items[i];
-    if (current_edge->drawn) {
+    struct edge *edge = drawn_node->edges.items[i];
+    if (edge->drawn) {
       continue;
     }
 
-    assert(current_edge->nodes.count == 2);
-    for (size_t j = 0; j < current_edge->nodes.count; ++j) {
-      struct node *neighbour = current_edge->nodes.items[i];
-      if (neighbour->hash != drawn_node->hash) {
-        printf("drawing neighbour, id: %d, hash: %d\n", neighbour->id,
-               neighbour->hash);
-        assert(neighbour->drawn == false);
-        for (size_t radius = NODEDISTANCE; radius < NODEDISTANCE * 3;
-             radius += 10) {
-          Vector2 pos_for_neighbour;
-          if (get_pos_for_node(graph, drawn_node, neighbour, current_edge,
-                               radius, &pos_for_neighbour)) {
-            draw_node_at(neighbour, pos_for_neighbour);
-            neighbour->pos = pos_for_neighbour;
-            neighbour->drawn = true;
-            draw_edge_at(current_edge, drawn_node->pos, pos_for_neighbour);
-
-            return draw_nodes_neighbours(graph, neighbour);
-          }
-          return neighbour->drawn;
-        }
-      }
+    struct node *neighbour = get_neighbour(drawn_node, edge);
+    if (!draw_nodes_neigbour(graph, drawn_node, neighbour, edge)) {
+      return false;
     }
   }
   return true;
@@ -243,9 +275,11 @@ int main(void) {
 
     struct Graph graph = getGraph();
 
-    if (draw_graph(&graph, (Vector2){400, 200})) {
+    if (!draw_graph(&graph, (Vector2){.x = 100, .y = 100})) {
       printf("failed to draw_graph\n");
       return 0;
+    } else {
+      printf("graph drawn!\n");
     }
 
     EndDrawing();
