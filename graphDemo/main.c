@@ -45,11 +45,18 @@ struct Graph getGraph(void) {
   // struct node node1 = {.id = 100};
   da_append_safe(&graph.nodes, (struct node){.id = 100});
   da_append_safe(&graph.nodes, (struct node){.id = 101});
+  da_append_safe(&graph.nodes, (struct node){.id = 102});
+  da_append_safe(&graph.nodes, (struct node){.id = 103});
+  da_append_safe(&graph.nodes, (struct node){.id = 104});
 
   // da_append_safe(&graph.nodes, (struct node){.id = 105});
   // da_append_safe(&graph.nodes, (struct node){.id = 106});
 
   da_append_safe(&graph.edges, ((struct edge){.ids = {100, 101}}));
+  da_append_safe(&graph.edges, ((struct edge){.ids = {101, 102}}));
+  da_append_safe(&graph.edges, ((struct edge){.ids = {101, 103}}));
+  da_append_safe(&graph.edges, ((struct edge){.ids = {101, 104}}));
+  da_append_safe(&graph.edges, ((struct edge){.ids = {103, 102}}));
   // da_append_safe(&graph.edges, ((struct edge){.ids = {105, 106}}));
 
   prepare_graph(&graph);
@@ -165,8 +172,8 @@ bool try_get_pos_for_neigbour(struct Graph *graph,
     Vector2 possible_pos = {0};
     possible_pos.x = drawn_node->pos.x + cos(step * i) * R;
     possible_pos.y = drawn_node->pos.y + sin(step * i) * R;
-    if (false == can_draw_at_without_collision(graph, drawn_node, neighbour,
-                                               possible_pos, edge)) {
+    if (true == can_draw_at_without_collision(graph, drawn_node, neighbour,
+                                              possible_pos, edge)) {
       *result_pos = possible_pos;
       return true;
     }
@@ -197,7 +204,10 @@ bool draw_nodes_neigbour(struct Graph *graph, struct node *drawn_node,
          neighbour->hash);
   assert(drawn_node->hash != neighbour->hash);
   assert(drawn_node->drawn == true);
-  assert(neighbour->drawn == false);
+
+  if (neighbour->drawn) {
+    return true;
+  }
 
   for (size_t radius = NODEDISTANCE; radius < NODEDISTANCE * 3; radius += 10) {
     Vector2 pos_for_neighbour;
@@ -214,6 +224,7 @@ bool draw_nodes_neigbour(struct Graph *graph, struct node *drawn_node,
         // process
         return false;
       }
+      break;
     }
   }
 
@@ -275,7 +286,7 @@ int main(void) {
 
     struct Graph graph = getGraph();
 
-    if (!draw_graph(&graph, (Vector2){.x = 100, .y = 100})) {
+    if (!draw_graph(&graph, (Vector2){.x = 300, .y = 200})) {
       printf("failed to draw_graph\n");
       return 0;
     } else {
