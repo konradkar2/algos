@@ -12,6 +12,7 @@ add_executable(${PROJECT_NAME}
     graph_printer_demo/main.c
     common/graph.c
     common/graph_printer.c
+    common/graph_algos.c
 )
 
 target_link_libraries(${PROJECT_NAME}
