@@ -1,8 +1,8 @@
 #ifndef DA_ARRAY_H
 #define DA_ARRAY_H
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdlib.h>
 
 #define vector_of(type, name)                                                  \
   struct name {                                                                \
@@ -23,6 +23,14 @@
       assert((xs)->items != NULL);                                             \
     }                                                                          \
     (xs)->items[(xs)->count++] = (x);                                          \
+  } while (0)
+
+#define da_reset(xs)                                                           \
+  do {                                                                         \
+    free((xs)->items);                                                         \
+    (xs)->items = NULL;                                                        \
+    (xs)->count = 0;                                                           \
+    (xs)->capacity = 0;                                                        \
   } while (0)
 
 #endif

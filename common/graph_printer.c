@@ -1,110 +1,7 @@
-#include "../utils/da_append.h"
-#include <assert.h>
-#include <ctype.h>
+#include "graph.h"
 #include <math.h>
 #include <raylib.h>
-#include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-struct node;
-vector_of(struct node *, ref_node_vec);
-
-struct edge {
-  int ids[2];
-  // populated later
-  struct ref_node_vec nodes;
-  bool visited;
-  int id;
-};
-
-vector_of(struct edge, edge_vec);
-vector_of(struct edge *, ref_edge_vec);
-
-struct node {
-  int id;
-  // populated later
-  bool visited;
-  struct ref_edge_vec edges;
-  Vector2 pos;
-};
-
-vector_of(struct node, node_vec);
-
-struct Graph {
-  struct node_vec nodes;
-  struct edge_vec edges;
-};
-
-void prepare_graph(struct Graph *graph);
-struct Graph getGraph(void) {
-  struct Graph graph = {0};
-
-  // struct node node1 = {.id = 100};
-  da_append_safe(&graph.nodes, (struct node){.id = 100});
-  da_append_safe(&graph.nodes, (struct node){.id = 101});
-  da_append_safe(&graph.nodes, (struct node){.id = 102});
-  da_append_safe(&graph.nodes, (struct node){.id = 103});
-  da_append_safe(&graph.nodes, (struct node){.id = 104});
-  da_append_safe(&graph.nodes, (struct node){.id = 105});
-  da_append_safe(&graph.nodes, (struct node){.id = 106});
-  da_append_safe(&graph.nodes, (struct node){.id = 107});
-  da_append_safe(&graph.nodes, (struct node){.id = 108});
-
-  // da_append_safe(&graph.nodes, (struct node){.id = 105});
-  // da_append_safe(&graph.nodes, (struct node){.id = 106});
-
-  da_append_safe(&graph.edges, ((struct edge){.ids = {100, 101}, .id = 200}));
-  da_append_safe(&graph.edges, ((struct edge){.ids = {101, 102}, .id = 201}));
-  da_append_safe(&graph.edges, ((struct edge){.ids = {102, 103}, .id = 202}));
-  // da_append_safe(&graph.edges, ((struct edge){.ids = {101, 104}, .id =
-  // 203}));
-  da_append_safe(&graph.edges, ((struct edge){.ids = {103, 104}, .id = 204}));
-  da_append_safe(&graph.edges, ((struct edge){.ids = {105, 101}, .id = 205}));
-  da_append_safe(&graph.edges, ((struct edge){.ids = {105, 106}, .id = 206}));
-  da_append_safe(&graph.edges, ((struct edge){.ids = {101, 107}, .id = 207}));
-  da_append_safe(&graph.edges, ((struct edge){.ids = {103, 108}, .id = 208}));
-  da_append_safe(&graph.edges, ((struct edge){.ids = {102, 107}, .id = 209}));
-  //da_append_safe(&graph.edges, ((struct edge){.ids = {107, 104}, .id = 210}));
-  //  da_append_safe(&graph.edges, ((struct edge){.ids = {105, 106}}));
-
-  prepare_graph(&graph);
-
-  return graph;
-}
-
-struct node *find_node(const struct node_vec *nodes, int id) {
-  for (size_t i = 0; i < nodes->count; ++i) {
-    struct node *current_node = &nodes->items[i];
-    if (current_node->id == id) {
-      return current_node;
-    }
-  }
-  return NULL;
-}
-
-void dump_graph(struct Graph *graph) {
-  for (size_t i = 0; i < graph->edges.count; ++i) {
-    struct edge *edge = &graph->edges.items[i];
-    struct node **nodes = edge->nodes.items;
-    printf("edge (id: %d, drawn: %d), nodes: (%d drawn: %d, %d, drawn: %d)\n",
-           edge->id, edge->visited, nodes[0]->id, nodes[0]->visited,
-           nodes[1]->id, nodes[1]->visited);
-  }
-}
-
-// populates references inside graph
-void prepare_graph(struct Graph *graph) {
-  for (size_t i = 0; i < graph->edges.count; ++i) {
-    struct edge *current_edge = &graph->edges.items[i];
-    for (int j = 0; j < 2; ++j) {
-      struct node *node = find_node(&graph->nodes, current_edge->ids[j]);
-      da_append_safe(&node->edges, current_edge);
-      da_append_safe(&current_edge->nodes, node);
-    }
-  }
-}
 
 #define NODERADIUS 30
 #define NODEHITBOXRADIUS (2 * NODERADIUS)
@@ -115,8 +12,8 @@ void prepare_graph(struct Graph *graph) {
 bool is_edge_colliding_with_any_nodes(struct Graph *graph,
                                       const struct edge *edge, Vector2 posA,
                                       Vector2 posB) {
-  const struct node *nodeA = edge->nodes.items[0];
-  const struct node *nodeB = edge->nodes.items[1];
+  const struct node *nodeA = edge->nodes[0];
+  const struct node *nodeB = edge->nodes[1];
 
   for (size_t k = 0; k < graph->nodes.count; ++k) {
     const struct node *node = &graph->nodes.items[k];
@@ -141,8 +38,8 @@ bool is_edge_colliding_with_any_edges(struct Graph *graph,
       continue;
     }
 
-    if (CheckCollisionLines(posA, posB, curr_edge->nodes.items[0]->pos,
-                            curr_edge->nodes.items[1]->pos, NULL)) {
+    if (CheckCollisionLines(posA, posB, curr_edge->nodes[0]->pos,
+                            curr_edge->nodes[1]->pos, NULL)) {
       return true;
     }
   }
@@ -195,8 +92,8 @@ bool can_draw_node_and_edge_without_collision(struct Graph *graph,
 // nodeA, nodeB are already drawn
 bool can_draw_edge_without_collision(struct Graph *graph,
                                      const struct edge *edge) {
-  const struct node *nodeA = edge->nodes.items[0];
-  const struct node *nodeB = edge->nodes.items[1];
+  const struct node *nodeA = edge->nodes[0];
+  const struct node *nodeB = edge->nodes[1];
   assert(edge->visited == false);
   assert(nodeA->visited == true);
   assert(nodeB->visited == true);
@@ -288,15 +185,6 @@ bool calculate_nodes_neigbour(struct Graph *graph, struct node *calculated_node,
   return true;
 }
 
-struct node *get_neighbour(struct node *node, struct edge *edge) {
-  assert(edge->nodes.count == 2);
-  if (edge->nodes.items[0]->id == node->id) {
-    return edge->nodes.items[1];
-  } else {
-    return edge->nodes.items[0];
-  }
-}
-
 bool calculate_nodes_neighbours(struct Graph *graph, struct node *drawn_node) {
   printf("drawing neighbours for node %d\n", drawn_node->id);
 
@@ -308,7 +196,7 @@ bool calculate_nodes_neighbours(struct Graph *graph, struct node *drawn_node) {
       continue;
     }
 
-    struct node *neighbour = get_neighbour(drawn_node, edge);
+    struct node *neighbour = graph_get_neighbour_of(drawn_node, edge);
     if (!calculate_nodes_neigbour(graph, drawn_node, neighbour, edge)) {
       return false;
     }
@@ -329,14 +217,15 @@ void reset_graph(struct Graph *graph) {
   }
 }
 
-bool calculate_graph(struct Graph *graph, Vector2 startPos) {
+bool calculate_nodes_pos_in_graph(struct Graph *graph, Vector2 root_node_pos) {
   for (size_t i = 0; i < graph->nodes.count; ++i) {
     reset_graph(graph);
     struct node *root_node = &graph->nodes.items[i];
     printf("\nStarting to draw with root node id %d\n", root_node->id);
     root_node->visited = true;
-    root_node->pos = startPos;
+    root_node->pos = root_node_pos;
     if (false == calculate_nodes_neighbours(graph, root_node)) {
+      graph_dump(graph);
       continue;
     }
     return true;
@@ -354,8 +243,8 @@ void draw_node(const struct node *node) {
 }
 
 void draw_edge(const struct edge *edge) {
-  const struct node *nodeA = edge->nodes.items[0];
-  const struct node *nodeB = edge->nodes.items[1];
+  const struct node *nodeA = edge->nodes[0];
+  const struct node *nodeB = edge->nodes[1];
   DrawLineV(nodeA->pos, nodeB->pos, BLACK);
 }
 
@@ -370,30 +259,18 @@ void draw_graph(const struct Graph *graph) {
     draw_node(node);
   }
 }
-int main(void) {
-  InitWindow(800, 450, "raylib [core] example - basic window");
-  SetRandomSeed(1050);
 
-  while (!WindowShouldClose()) {
-    BeginDrawing();
-    ClearBackground(RAYWHITE);
+bool graph_printer_draw(const struct Graph *graph, Vector2 pos, int width,
+                        int height) {
+  struct Graph graph_tmp = {0};
+  graph_copy(graph, &graph_tmp);
 
-    struct Graph graph = getGraph();
-    dump_graph(&graph);
-    if (!calculate_graph(&graph, (Vector2){.x = 300, .y = 200})) {
-      printf("failed to draw_graph\n");
-      return 0;
-    } else {
-      draw_graph(&graph);
-      printf("graph drawn!\n");
-      dump_graph(&graph);
-    }
-
-    EndDrawing();
-    // pause();
+  Vector2 root_node_pos = {.x = (pos.x + width) / 2.0,
+                           .y = (pos.y + height) / 2.0};
+  if (!calculate_nodes_pos_in_graph(&graph_tmp, root_node_pos)) {
+    return false;
   }
+  draw_graph(&graph_tmp);
 
-  CloseWindow();
-
-  return 0;
+  return true;
 }
