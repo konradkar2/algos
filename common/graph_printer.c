@@ -1,4 +1,5 @@
 #include "graph.h"
+#include "graph_algos.h"
 #include <math.h>
 #include <raylib.h>
 #include <stdio.h>
@@ -112,8 +113,6 @@ bool try_get_pos_for_neigbour(struct Graph *graph,
                               const struct node *neighbour,
                               const struct edge *edge, double R,
                               Vector2 *result_pos) {
-  assert(drawn_node->visited == true);
-  assert(neighbour->visited == false);
 
   const double step = 2.0 * PI / CLOCKSPLIT;
   for (int i = 0; i < CLOCKSPLIT; ++i) {
@@ -130,26 +129,10 @@ bool try_get_pos_for_neigbour(struct Graph *graph,
   return false;
 }
 
-bool calculate_nodes_neighbours(struct Graph *graph, struct node *drawn_node);
-
 bool calculate_nodes_neigbour(struct Graph *graph, struct node *calculated_node,
                               struct node *neighbour, struct edge *edge) {
   printf("calculating neighbour, id: %d\n", neighbour->id);
   assert(calculated_node->id != neighbour->id);
-  assert(calculated_node->visited == true);
-
-  if (neighbour->visited && edge->visited == true) {
-    return true;
-  }
-
-  if (neighbour->visited && edge->visited == false) {
-    printf("nodes calculate, calculating edge...\n");
-    if (can_draw_edge_without_collision(graph, edge)) {
-      edge->visited = true;
-      return true;
-    }
-    return false;
-  }
 
   Vector2 pos_for_neighbour = {0};
   bool pos_found = false;
@@ -170,33 +153,6 @@ bool calculate_nodes_neigbour(struct Graph *graph, struct node *calculated_node,
          pos_for_neighbour.y);
 
   neighbour->pos = pos_for_neighbour;
-  neighbour->visited = true;
-  edge->visited = true;
-
-  if (!calculate_nodes_neighbours(graph, neighbour)) {
-    // we failed to draw neigbour's neigbours so lets cancel drawing
-    // process
-    return false;
-  }
-
-  return true;
-}
-
-bool calculate_nodes_neighbours(struct Graph *graph, struct node *drawn_node) {
-  printf("drawing neighbours for node %d\n", drawn_node->id);
-
-  assert(drawn_node->visited == true);
-
-  FOR_EACH_EDGE_IN_NODE(drawn_node, edge_it) {
-    if ((*edge_it)->visited) {
-      continue;
-    }
-
-    struct node *neighbour = graph_get_neighbour_of(drawn_node, *edge_it);
-    if (!calculate_nodes_neigbour(graph, drawn_node, neighbour, *edge_it)) {
-      return false;
-    }
-  }
   return true;
 }
 
@@ -209,16 +165,54 @@ void reset_graph(struct Graph *graph) {
   FOR_EACH_EDGE_IN_GRAPH(graph, edge_it) { edge_it->visited = false; }
 }
 
+struct drawing_state {
+  struct Graph *graph;
+  bool drawing_failed;
+};
+
+bool on_visit_callback(void *udata, struct node *from, struct node *to,
+                       struct edge *edge) {
+
+  struct drawing_state *state = udata;
+  if (from) {
+    if (!calculate_nodes_neigbour(state->graph, from, to, edge)) {
+      state->drawing_failed = true;
+      return false;
+    }
+  }
+  return true;
+}
+
+bool calculate_unvisited_edges(struct Graph *graph) {
+  FOR_EACH_EDGE_IN_GRAPH(graph, edge_it) {
+    if (edge_it->visited == false) {
+      if (false == can_draw_edge_without_collision(graph, edge_it)) {
+        printf("can't draw edge %d\n", edge_it->id);
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 bool calculate_nodes_pos_in_graph(struct Graph *graph, Vector2 root_node_pos) {
   FOR_EACH_NODE_IN_GRAPH(graph, root_node_it) {
     reset_graph(graph);
+
+    struct drawing_state state = {.graph = graph, .drawing_failed = false};
+
     printf("\nStarting to draw with root node id %d\n", root_node_it->id);
-    root_node_it->visited = true;
     root_node_it->pos = root_node_pos;
-    if (false == calculate_nodes_neighbours(graph, root_node_it)) {
+
+    dfs_visit_node(NULL, root_node_it, NULL, &state, on_visit_callback);
+
+    if (state.drawing_failed == true ||
+        false == calculate_unvisited_edges(graph)) {
+      printf("drawing failed\n");
       graph_dump(graph);
       continue;
     }
+
     return true;
   }
   return false;
@@ -254,6 +248,7 @@ bool graph_printer_draw(const struct Graph *graph, Vector2 pos, int width,
   if (!calculate_nodes_pos_in_graph(&graph_tmp, root_node_pos)) {
     return false;
   }
+  graph_dump(&graph_tmp);
   draw_graph(&graph_tmp);
 
   return true;

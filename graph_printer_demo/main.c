@@ -44,6 +44,12 @@ struct Graph getGraph(void) {
                  ((struct edge){.node_ids = {103, 108}, .id = 208}));
   da_append_safe(&graph.edges,
                  ((struct edge){.node_ids = {102, 107}, .id = 209}));
+  // da_append_safe(&graph.edges,
+  //                ((struct edge){.node_ids = {106, 107}, .id = 210}));
+  // da_append_safe(&graph.edges,
+  //                ((struct edge){.node_ids = {108, 101}, .id = 211}));
+  //da_append_safe(&graph.edges,
+  //               ((struct edge){.node_ids = {107, 103}, .id = 212}));
 
   graph_construct(&graph);
 
@@ -51,8 +57,8 @@ struct Graph getGraph(void) {
 }
 
 int main(void) {
-  int w = 800;
-  int h = 450;
+  int w = 1400;
+  int h = 800;
 
   InitWindow(w, h, "raylib [core] example - basic window");
   SetRandomSeed(1050);
@@ -63,7 +69,7 @@ int main(void) {
 
     struct Graph graph = getGraph();
     if (!graph_printer_draw(&graph, (Vector2){0}, w, h)) {
-      printf("failed to draw graph");
+      printf("failed to draw graph\n");
       return 1;
     }
 
