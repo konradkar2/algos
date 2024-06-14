@@ -15,13 +15,13 @@ bool is_edge_colliding_with_any_nodes(struct Graph *graph,
   const struct node *nodeA = edge->nodes[0];
   const struct node *nodeB = edge->nodes[1];
 
-  for (size_t k = 0; k < graph->nodes.count; ++k) {
-    const struct node *node = &graph->nodes.items[k];
-    if (!node->visited || node->id == nodeA->id || node->id == nodeB->id) {
+  FOR_EACH_NODE_IN_GRAPH(graph, node_it) {
+    if (!node_it->visited || node_it->id == nodeA->id ||
+        node_it->id == nodeB->id) {
       continue;
     }
 
-    if (CheckCollisionCircleLine(node->pos, NODEHITBOXRADIUS, posA, posB)) {
+    if (CheckCollisionCircleLine(node_it->pos, NODEHITBOXRADIUS, posA, posB)) {
       return true;
     }
   }
@@ -32,14 +32,13 @@ bool is_edge_colliding_with_any_nodes(struct Graph *graph,
 bool is_edge_colliding_with_any_edges(struct Graph *graph,
                                       const struct edge *edge, Vector2 posA,
                                       Vector2 posB) {
-  for (size_t j = 0; j < graph->edges.count; ++j) {
-    const struct edge *curr_edge = &graph->edges.items[j];
-    if (!curr_edge->visited || curr_edge->id == edge->id) {
+  FOR_EACH_EDGE_IN_GRAPH(graph, edge_it) {
+    if (!edge_it->visited || edge_it->id == edge->id) {
       continue;
     }
 
-    if (CheckCollisionLines(posA, posB, curr_edge->nodes[0]->pos,
-                            curr_edge->nodes[1]->pos, NULL)) {
+    if (CheckCollisionLines(posA, posB, edge_it->nodes[0]->pos,
+                            edge_it->nodes[1]->pos, NULL)) {
       return true;
     }
   }
@@ -68,20 +67,18 @@ bool can_draw_node_and_edge_without_collision(struct Graph *graph,
   }
 
   // check if node will collide with any of node
-  for (size_t k = 0; k < graph->nodes.count; ++k) {
-    const struct node *curr_node = &graph->nodes.items[k];
-
-    if (!curr_node->visited) {
+  FOR_EACH_NODE_IN_GRAPH(graph, node_it) {
+    if (!node_it->visited) {
       continue;
     }
-    if (curr_node->id == node->id) {
+    if (node_it->id == node->id) {
       continue;
     }
-    if (curr_node->id == drawn_node->id) {
+    if (node_it->id == drawn_node->id) {
       continue;
     }
 
-    if (CheckCollisionCircles(node_pos, NODEHITBOXRADIUS, curr_node->pos,
+    if (CheckCollisionCircles(node_pos, NODEHITBOXRADIUS, node_it->pos,
                               NODEHITBOXRADIUS)) {
       return false;
     }
@@ -190,14 +187,13 @@ bool calculate_nodes_neighbours(struct Graph *graph, struct node *drawn_node) {
 
   assert(drawn_node->visited == true);
 
-  for (size_t i = 0; i < drawn_node->edges.count; ++i) {
-    struct edge *edge = drawn_node->edges.items[i];
-    if (edge->visited) {
+  FOR_EACH_EDGE_IN_NODE(drawn_node, edge_it) {
+    if ((*edge_it)->visited) {
       continue;
     }
 
-    struct node *neighbour = graph_get_neighbour_of(drawn_node, edge);
-    if (!calculate_nodes_neigbour(graph, drawn_node, neighbour, edge)) {
+    struct node *neighbour = graph_get_neighbour_of(drawn_node, *edge_it);
+    if (!calculate_nodes_neigbour(graph, drawn_node, neighbour, *edge_it)) {
       return false;
     }
   }
@@ -205,26 +201,21 @@ bool calculate_nodes_neighbours(struct Graph *graph, struct node *drawn_node) {
 }
 
 void reset_graph(struct Graph *graph) {
-  for (size_t i = 0; i < graph->nodes.count; ++i) {
-    struct node *node = &graph->nodes.items[i];
-    node->visited = false;
-    node->pos = (Vector2){0};
+  FOR_EACH_NODE_IN_GRAPH(graph, node_it) {
+    node_it->visited = false;
+    node_it->pos = (Vector2){0};
   }
 
-  for (size_t i = 0; i < graph->edges.count; ++i) {
-    struct edge *edge = &graph->edges.items[i];
-    edge->visited = false;
-  }
+  FOR_EACH_EDGE_IN_GRAPH(graph, edge_it) { edge_it->visited = false; }
 }
 
 bool calculate_nodes_pos_in_graph(struct Graph *graph, Vector2 root_node_pos) {
-  for (size_t i = 0; i < graph->nodes.count; ++i) {
+  FOR_EACH_NODE_IN_GRAPH(graph, root_node_it) {
     reset_graph(graph);
-    struct node *root_node = &graph->nodes.items[i];
-    printf("\nStarting to draw with root node id %d\n", root_node->id);
-    root_node->visited = true;
-    root_node->pos = root_node_pos;
-    if (false == calculate_nodes_neighbours(graph, root_node)) {
+    printf("\nStarting to draw with root node id %d\n", root_node_it->id);
+    root_node_it->visited = true;
+    root_node_it->pos = root_node_pos;
+    if (false == calculate_nodes_neighbours(graph, root_node_it)) {
       graph_dump(graph);
       continue;
     }
@@ -249,15 +240,8 @@ void draw_edge(const struct edge *edge) {
 }
 
 void draw_graph(const struct Graph *graph) {
-  for (size_t i = 0; i < graph->edges.count; ++i) {
-    struct edge *edge = &graph->edges.items[i];
-    draw_edge(edge);
-  }
-
-  for (size_t i = 0; i < graph->nodes.count; ++i) {
-    struct node *node = &graph->nodes.items[i];
-    draw_node(node);
-  }
+  FOR_EACH_EDGE_IN_GRAPH(graph, edge_it) { draw_edge(edge_it); }
+  FOR_EACH_NODE_IN_GRAPH(graph, node_it) { draw_node(node_it); }
 }
 
 bool graph_printer_draw(const struct Graph *graph, Vector2 pos, int width,

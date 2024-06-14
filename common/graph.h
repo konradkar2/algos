@@ -36,12 +36,24 @@ struct Graph {
   struct edge_vec edges;
 };
 
+#define FOR_EACH_EDGE_IN_GRAPH(GRAPH, EDGE_IT)                                 \
+  for (struct edge *EDGE_IT = &GRAPH->edges.items[0];                          \
+       EDGE_IT < &GRAPH->edges.items[GRAPH->edges.count]; ++EDGE_IT)
+
+#define FOR_EACH_NODE_IN_GRAPH(GRAPH, NODE_IT)                                 \
+  for (struct node *NODE_IT = &GRAPH->nodes.items[0];                          \
+       NODE_IT < &GRAPH->nodes.items[GRAPH->nodes.count]; ++NODE_IT)
+
+#define FOR_EACH_EDGE_IN_NODE(NODE, EDGE_IT)                                   \
+  for (struct edge **EDGE_IT = &NODE->edges.items[0];                          \
+       EDGE_IT < &NODE->edges.items[NODE->edges.count]; ++EDGE_IT)
+
 // populates references inside a graph
 void graph_construct(struct Graph *graph);
 void graph_destroy(struct Graph *graph);
 void graph_copy(const struct Graph *graph, struct Graph *output);
 
-//dumps graph details to stdio
+// dumps graph details to stdio
 void graph_dump(struct Graph *graph);
 
 // finds a node having a specific id

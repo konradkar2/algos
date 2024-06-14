@@ -4,20 +4,18 @@
 #include <stdio.h>
 
 struct node *graph_find_node(struct Graph *graph, int id) {
-  for (size_t i = 0; i < graph->nodes.count; ++i) {
-    struct node *node = &graph->nodes.items[i];
-    if (node->id == id) {
-      return node;
+  FOR_EACH_NODE_IN_GRAPH(graph, node_it) {
+    if (node_it->id == id) {
+      return node_it;
     }
   }
   return NULL;
 }
 
 void graph_destroy(struct Graph *graph) {
-  for (size_t i = 0; i < graph->edges.count; ++i) {
-    struct edge *current_edge = &graph->edges.items[i];
-    current_edge->nodes[0] = NULL;
-    current_edge->nodes[1] = NULL;
+  FOR_EACH_EDGE_IN_GRAPH(graph, edge_it) {
+    edge_it->nodes[0] = NULL;
+    edge_it->nodes[1] = NULL;
   }
 
   for (size_t i = 0; i < graph->nodes.count; ++i) {
@@ -27,21 +25,19 @@ void graph_destroy(struct Graph *graph) {
 }
 
 void graph_construct(struct Graph *graph) {
-  for (size_t i = 0; i < graph->edges.count; ++i) {
-    struct edge *current_edge = &graph->edges.items[i];
+  FOR_EACH_EDGE_IN_GRAPH(graph, edge_it) {
     for (int j = 0; j < 2; ++j) {
-      struct node *node = graph_find_node(graph, current_edge->node_ids[j]);
+      struct node *node = graph_find_node(graph, edge_it->node_ids[j]);
       assert(node != NULL && "edge has assigned unexisting node id");
-      da_append_safe(&node->edges, current_edge);
-      current_edge->nodes[j] = node;
+      da_append_safe(&node->edges, edge_it);
+      edge_it->nodes[j] = node;
     }
   }
 }
 
 void graph_copy(const struct Graph *in, struct Graph *output) {
-  for (size_t i = 0; i < in->edges.count; ++i) {
-    struct edge *current_edge = &in->edges.items[i];
-    da_append_safe(&output->edges, *current_edge);
+  FOR_EACH_EDGE_IN_GRAPH(in, edge_it) {
+    da_append_safe(&output->edges, *edge_it);
   }
 
   for (size_t i = 0; i < in->nodes.count; ++i) {
@@ -61,10 +57,11 @@ struct node *graph_get_neighbour_of(struct node *node, struct edge *edge) {
 }
 
 void graph_dump(struct Graph *graph) {
-  for (size_t i = 0; i < graph->edges.count; ++i) {
-    struct edge *edge = &graph->edges.items[i];
-    printf("edge (id: %d, drawn: %d), nodes: (%d visited: %d, %d, visited: %d)\n",
-           edge->id, edge->visited, edge->nodes[0]->id, edge->nodes[0]->visited,
-           edge->nodes[1]->id, edge->nodes[1]->visited);
+  FOR_EACH_EDGE_IN_GRAPH(graph, edge_it) {
+    printf(
+        "edge (id: %d, drawn: %d), nodes: (%d visited: %d, %d, visited: %d)\n",
+        edge_it->id, edge_it->visited, edge_it->nodes[0]->id,
+        edge_it->nodes[0]->visited, edge_it->nodes[1]->id,
+        edge_it->nodes[1]->visited);
   }
 }
