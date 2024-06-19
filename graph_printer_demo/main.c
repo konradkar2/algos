@@ -1,4 +1,5 @@
 #include "../common/graph.h"
+#include "../common/graph_algos.h"
 #include "../common/graph_printer.h"
 #include "../utils/da_append.h"
 #include <assert.h>
@@ -12,44 +13,26 @@
 struct Graph getGraph(void) {
   struct Graph graph = {0};
 
-  // struct node node1 = {.id = 100};
-  da_append_safe(&graph.nodes, (struct node){.id = 100});
-  da_append_safe(&graph.nodes, (struct node){.id = 101});
-  da_append_safe(&graph.nodes, (struct node){.id = 102});
-  da_append_safe(&graph.nodes, (struct node){.id = 103});
-  da_append_safe(&graph.nodes, (struct node){.id = 104});
-  da_append_safe(&graph.nodes, (struct node){.id = 105});
-  da_append_safe(&graph.nodes, (struct node){.id = 106});
-  da_append_safe(&graph.nodes, (struct node){.id = 107});
-  da_append_safe(&graph.nodes, (struct node){.id = 108});
+  graph_add_node(&graph, 100);
+  graph_add_node(&graph, 101);
+  graph_add_node(&graph, 102);
+  graph_add_node(&graph, 103);
+  graph_add_node(&graph, 104);
+  graph_add_node(&graph, 105);
+  graph_add_node(&graph, 106);
+  graph_add_node(&graph, 107);
+  graph_add_node(&graph, 108);
 
-  // da_append_safe(&graph.nodes, (struct node){.id = 105});
-  // da_append_safe(&graph.nodes, (struct node){.id = 106});
-
-  da_append_safe(&graph.edges,
-                 ((struct edge){.node_ids = {100, 101}, .id = 200}));
-  da_append_safe(&graph.edges,
-                 ((struct edge){.node_ids = {101, 102}, .id = 201}));
-  da_append_safe(&graph.edges,
-                 ((struct edge){.node_ids = {102, 103}, .id = 202}));
-  da_append_safe(&graph.edges,
-                 ((struct edge){.node_ids = {103, 104}, .id = 204}));
-  da_append_safe(&graph.edges,
-                 ((struct edge){.node_ids = {105, 101}, .id = 205}));
-  da_append_safe(&graph.edges,
-                 ((struct edge){.node_ids = {105, 106}, .id = 206}));
-  da_append_safe(&graph.edges,
-                 ((struct edge){.node_ids = {101, 107}, .id = 207}));
-  da_append_safe(&graph.edges,
-                 ((struct edge){.node_ids = {103, 108}, .id = 208}));
-  da_append_safe(&graph.edges,
-                 ((struct edge){.node_ids = {102, 107}, .id = 209}));
-  // da_append_safe(&graph.edges,
-  //                ((struct edge){.node_ids = {106, 107}, .id = 210}));
-  // da_append_safe(&graph.edges,
-  //                ((struct edge){.node_ids = {108, 101}, .id = 211}));
-  //da_append_safe(&graph.edges,
-  //               ((struct edge){.node_ids = {107, 103}, .id = 212}));
+  graph_add_edge(&graph, 100, 101);
+  graph_add_edge(&graph, 101, 102);
+  graph_add_edge(&graph, 102, 103);
+  graph_add_edge(&graph, 103, 104);
+  graph_add_edge(&graph, 105, 101);
+  graph_add_edge(&graph, 105, 106);
+  graph_add_edge(&graph, 101, 107);
+  graph_add_edge(&graph, 103, 108);
+  graph_add_edge(&graph, 102, 107);
+  graph_add_edge(&graph, 108, 101);
 
   graph_construct(&graph);
 
@@ -68,6 +51,11 @@ int main(void) {
     ClearBackground(RAYWHITE);
 
     struct Graph graph = getGraph();
+    
+    struct graph_vec cycles = find_cycles(&graph, &graph.nodes.items[0]);
+    printf("found %zuu cycles!\n", cycles.count);
+
+    
     if (!graph_printer_draw(&graph, (Vector2){0}, w, h)) {
       printf("failed to draw graph\n");
       return 1;

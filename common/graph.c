@@ -12,6 +12,16 @@ struct node *graph_find_node(struct Graph *graph, int id) {
   return NULL;
 }
 
+void graph_add_node(struct Graph *graph, int node_id) {
+  da_append_safe(&graph->nodes, (struct node){.id = node_id});
+}
+
+void graph_add_edge(struct Graph *graph, int node_a_id, int node_b_id) {
+  const size_t id = graph->edges.count;
+  da_append_safe(&graph->edges,
+                 ((struct edge){.node_ids = {node_a_id, node_b_id}, .id = id}));
+}
+
 void graph_destroy(struct Graph *graph) {
   FOR_EACH_EDGE_IN_GRAPH(graph, edge_it) {
     edge_it->nodes[0] = NULL;

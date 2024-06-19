@@ -53,8 +53,6 @@ bool can_draw_node_and_edge_without_collision(struct Graph *graph,
                                               Vector2 node_pos,
                                               const struct edge *edge) {
 
-  assert(drawn_node->visited == true);
-
   // check if edge will collide with any of edges
   if (is_edge_colliding_with_any_edges(graph, edge, drawn_node->pos,
                                        node_pos)) {

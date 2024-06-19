@@ -33,4 +33,11 @@
     (xs)->capacity = 0;                                                        \
   } while (0)
 
+#define FOR_EACH_EDGE_IN_GRAPH(GRAPH, EDGE_IT)                                 \
+  for (struct edge *EDGE_IT = &GRAPH->edges.items[0];                          \
+       EDGE_IT < &GRAPH->edges.items[GRAPH->edges.count]; ++EDGE_IT)
+
+#define DA_FOR_EACH(xs, IDX) for (size_t IDX = 0; IDX < (xs)->count; ++IDX)
+
+
 #endif

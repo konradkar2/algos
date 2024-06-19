@@ -36,6 +36,9 @@ struct Graph {
   struct edge_vec edges;
 };
 
+void graph_add_node(struct Graph *graph, int node_id);
+void graph_add_edge(struct Graph *graph, int node_a_id, int node_b_id);
+
 #define FOR_EACH_EDGE_IN_GRAPH(GRAPH, EDGE_IT)                                 \
   for (struct edge *EDGE_IT = &GRAPH->edges.items[0];                          \
        EDGE_IT < &GRAPH->edges.items[GRAPH->edges.count]; ++EDGE_IT)
