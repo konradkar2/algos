@@ -2,6 +2,7 @@
 #include "../utils/da_append.h"
 #include <assert.h>
 #include <stdio.h>
+#include <time.h>
 
 struct node *graph_find_node(struct Graph *graph, int id) {
   FOR_EACH_NODE_IN_GRAPH(graph, node_it) {
@@ -38,7 +39,10 @@ void graph_construct(struct Graph *graph) {
   FOR_EACH_EDGE_IN_GRAPH(graph, edge_it) {
     for (int j = 0; j < 2; ++j) {
       struct node *node = graph_find_node(graph, edge_it->node_ids[j]);
-      assert(node != NULL && "edge has assigned unexisting node id");
+      if (node != NULL) {
+        graph_dump(graph);
+        assert(0 && "edge has assigned unexisting node id");
+      }
       da_append_safe(&node->edges, edge_it);
       edge_it->nodes[j] = node;
     }

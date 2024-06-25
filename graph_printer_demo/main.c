@@ -53,10 +53,10 @@ int main(void) {
     struct Graph graph = getGraph();
     
     struct graph_vec cycles = find_cycles(&graph, &graph.nodes.items[0]);
-    printf("found %zuu cycles!\n", cycles.count);
+    printf("found %zu cycles!\n", cycles.count);
 
     
-    if (!graph_printer_draw(&graph, (Vector2){0}, w, h)) {
+    if (!graph_printer_draw(&cycles.items[0], (Vector2){0}, w, h)) {
       printf("failed to draw graph\n");
       return 1;
     }

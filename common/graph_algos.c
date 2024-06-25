@@ -92,10 +92,8 @@ bool find_cycle_cb(void *udata, struct node *from, struct node *to,
   (void)edge;
 
   struct cycle_finder_state *state = udata;
-  // root node
-  if (from == NULL) {
-    da_append_safe(&state->traversed_nodes_ids, to->id);
-  } else {
+  // not root node
+  if (from != NULL) {
     ssize_t idx_in_traversed =
         find_idx_of_node(&state->traversed_nodes_ids, to->id);
     // found cycle
@@ -105,26 +103,26 @@ bool find_cycle_cb(void *udata, struct node *from, struct node *to,
       for (size_t i = idx_in_traversed; i < state->traversed_nodes_ids.count;
            ++i) {
 
-        if (i != state->traversed_nodes_ids.count - 1) {
-          graph_add_node(&cycle_graph, traversed_nodes[i]);
-        }
-
+        graph_add_node(&cycle_graph, traversed_nodes[i]);
         if (i != (size_t)idx_in_traversed) {
           graph_add_edge(&cycle_graph, traversed_nodes[i],
                          traversed_nodes[i - 1]);
         }
       }
+      graph_add_edge(&cycle_graph, traversed_nodes[idx_in_traversed],
+                     traversed_nodes[state->traversed_nodes_ids.count - 1]);
       da_append_safe(&state->result_graphs, cycle_graph);
       da_reset(&state->traversed_nodes_ids);
     }
   }
 
+  da_append_safe(&state->traversed_nodes_ids, to->id);
   return true;
 }
 
 struct graph_vec find_cycles(const struct Graph *graph,
                              struct node *root_node) {
-  (void)graph;                                
+  (void)graph;
   struct cycle_finder_state state = {0};
   dfs_visit_node_and_edge(NULL, root_node, NULL, &state, find_cycle_cb);
 
